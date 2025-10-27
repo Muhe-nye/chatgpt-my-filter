@@ -1,0 +1,71 @@
+name: Auto tag & release on @version bump
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - "ChatGPT-MyFilter.user.js"       # 你的 .user.js 文件路径
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      FILE: ChatGPT-MyFilter.user.js     # 你的 .user.js 文件名
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }         # 需要完整历史以读/写tag
+
+      # 1) 从脚本头里读取 @version
+      - id: ver
+        run: |
+          VER=$(grep -Po '(?<=@version\s+)\S+' "$FILE") || true
+          [ -z "$VER" ] && echo "No @version found" && exit 1
+          echo "ver=$VER" >> $GITHUB_OUTPUT
+          echo "Detected version: $VER"
+
+      # 2) 若 tag 不存在则创建并推送
+      - name: Create tag if missing
+        run: |
+          TAG="v${{ steps.ver.outputs.ver }}"
+          git fetch --tags
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG exists. Skip."
+          else
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+          fi
+
+      # 3) 发 Release（幂等，存在就复用）
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.ver }}
+          name: v${{ steps.ver.outputs.ver }}
+          body: |
+            Auto release for v${{ steps.ver.outputs.ver }}.
+
+            Install links:
+            - jsDelivr (versioned): https://cdn.jsdelivr.net/gh/${{ github.repository }}@v${{ steps.ver.outputs.ver }}/${{ env.FILE }}
+            - jsDelivr (latest):   https://cdn.jsdelivr.net/gh/${{ github.repository }}@latest/${{ env.FILE }}
+            - Raw (updateURL):     https://raw.githubusercontent.com/${{ github.repository }}/main/${{ env.FILE }}
+
+      # 4) 刷CDN缓存，让 latest/新tag 立即生效
+      - name: Purge jsDelivr cache (optional)
+        run: |
+          curl -s "https://purge.jsdelivr.net/gh/${{ github.repository }}@latest/${{ env.FILE }}"
+          curl -s "https://purge.jsdelivr.net/gh/${{ github.repository }}@v${{ steps.ver.outputs.ver }}/${{ env.FILE }}"
+
+      # 5) 把安装链接写进 Run summary，方便复制
+      - name: Print install links
+        run: |
+          {
+            echo "### Install links"
+            echo ""
+            echo "- jsDelivr (versioned): https://cdn.jsdelivr.net/gh/${{ github.repository }}@v${{ steps.ver.outputs.ver }}/${{ env.FILE }}"
+            echo "- jsDelivr (latest):   https://cdn.jsdelivr.net/gh/${{ github.repository }}@latest/${{ env.FILE }}"
+            echo "- Raw (updateURL):     https://raw.githubusercontent.com/${{ github.repository }}/main/${{ env.FILE }}"
+          } >> $GITHUB_STEP_SUMMARY
