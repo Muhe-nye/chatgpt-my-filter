@@ -14,8 +14,8 @@
 // @icon         https://www.greasyfork.org/packs/media/images/blacklogo64-*.png
 // @homepage     https://github.com/Muhe-nye/chatgpt-my-filter
 // @supportURL   https://github.com/Muhe-nye/chatgpt-my-filter/issues
-// @downloadURL https://raw.githubusercontent.com/USER/REPO/BRANCH/ChatGPT-MyFilter.user.js
-// @updateURL   https://raw.githubusercontent.com/USER/REPO/BRANCH/ChatGPT-MyFilter.user.js
+// @downloadURL https://raw.githubusercontent.com/Muhe-nye/chatgpt-my-filter/main/ChatGPT-MyFilter.user.js
+// @updateURL   https://raw.githubusercontent.com/Muhe-nye/chatgpt-my-filter/main/ChatGPT-MyFilter.user.js
 // ==/UserScript==
 (function () {
   const STORAGE_KEY = 'cgpt_my_conversations_v1';
